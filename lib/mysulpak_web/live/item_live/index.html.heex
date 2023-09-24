@@ -1,0 +1,52 @@
+<%!-- <.header>
+  Listing Items
+  <:actions>
+    <.link patch={~p"/items/new"}>
+      <.button>New Item</.button>
+    </.link>
+  </:actions>
+  </.header> --%>
+
+  <%!-- <.table id="items" rows={@streams.items} row_click={fn {_id, item} -> JS.navigate(~p"/items/#{item}") end}
+    >
+    <:col :let={{_id, item}} label="Name">
+      <%= item.name %>
+    </:col>
+    <:col :let={{_id, item}} label="Desc">
+      <%= item.desc %>
+    </:col>
+    <:action :let={{_id, item}}>
+      <div class="sr-only">
+        <.link navigate={~p"/items/#{item}"}>Show</.link>
+      </div>
+      <.link patch={~p"/items/#{item}/edit"}>Edit</.link>
+    </:action>
+    <:action :let={{id, item}}>
+      <.link phx-click={JS.push("delete", value: %{id: item.id}) |> hide("##{id}")}
+        data-confirm="Are you sure?"
+        >
+        Delete
+      </.link>
+    </:action>
+    </.table> --%>
+
+    <div style="display: grid;
+grid-template-columns: repeat(3, 1fr);
+grid-column-gap: 10px;
+grid-row-gap: 5px; ">
+      <div :for={{dom_id, item} <- @streams.items} id={dom_id} style="background-color: gainsboro; border-radius: 5px">
+        <img src={"/uploads/#{item.picture}"} alt="pic" width="400">
+        <h6>
+          <%= item.name %>
+        </h6>
+        <hr>
+        <small style="color: grey;">
+          <%= String.slice(item.desc, 0..20) %>...
+        </small>
+      </div>
+    </div>
+
+    <.modal :if={@live_action in [:new, :edit]} id="item-modal" show on_cancel={JS.patch(~p"/items")}>
+      <.live_component module={MysulpakWeb.ItemLive.FormComponent} id={@item.id || :new} title={@page_title}
+        action={@live_action} item={@item} patch={~p"/items"} />
+    </.modal>
