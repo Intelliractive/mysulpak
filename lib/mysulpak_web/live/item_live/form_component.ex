@@ -9,32 +9,51 @@ defmodule MysulpakWeb.ItemLive.FormComponent do
     <div>
       <.header>
         <%= @title %>
-          <:subtitle>Форма изменения\добавления товара</:subtitle>
+        <:subtitle>Форма изменения\добавления товара</:subtitle>
       </.header>
 
-      <.simple_form for={@form} id="item-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+      <.simple_form
+        for={@form}
+        id="item-form"
+        phx-target={@myself}
+        phx-change="validate"
+        phx-submit="save"
+      >
         <.live_file_input upload={@uploads.picture} />
-        <%!-- use phx-drop-target with the upload ref to enable file drag and drop --%>
-        <%!-- <section phx-drop-target={@uploads.picture.ref}>
-        </section> --%>
+
+        <section phx-drop-target={@uploads.picture.ref}>
           <%= for entry <- @uploads.picture.entries do %>
-                <progress value={entry.progress} max="100">
-                  <%= entry.progress %>%
-                </progress>
+            <article class="upload-entry">
+              <figure>
+                <.live_img_preview entry={entry} />
+                <figcaption><%= entry.client_name %></figcaption>
+              </figure>
 
-                <button type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button>
+              <progress value={entry.progress} max="100"><%= entry.progress %>%</progress>
 
-                <%= for err <- upload_errors(@uploads.picture, entry) do %>
-                  <p class="alert alert-danger">
-                    <%= error_to_string(err) %>
-                  </p>
-                <% end %>
+              <button
+                type="button"
+                phx-click="cancel-upload"
+                phx-value-ref={entry.ref}
+                aria-label="cancel"
+              >
+                &times;
+              </button>
+
+              <%= for err <- upload_errors(@uploads.picture, entry) do %>
+                <p class="alert alert-danger">
+                  <%= error_to_string(err) %>
+                </p>
               <% end %>
+            </article>
+          <% end %>
+        </section>
+
         <.input field={@form[:name]} type="text" label="Name" />
         <.input field={@form[:desc]} type="text" label="Desc" />
 
         <:actions>
-          <.button phx-disable-with="Saving...">Сохранить</.button>
+          <.button phx-disable-with="Сейчас...">Сохранить</.button>
         </:actions>
       </.simple_form>
     </div>
@@ -49,6 +68,7 @@ defmodule MysulpakWeb.ItemLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign_form(changeset)
+     |> assign(:uploaded_files, [])
      |> allow_upload(:picture, accept: ~w(.png .jpg), max_entries: 1, auto_upload: true)}
   end
 
@@ -70,14 +90,13 @@ defmodule MysulpakWeb.ItemLive.FormComponent do
   def handle_event("save", %{"item" => item_params}, socket) do
     uploaded_files =
       consume_uploaded_entries(socket, :picture, fn %{path: path}, _entry ->
-        dest = Path.join("priv/status/uploads", Path.basename(path))
-        # The `static/uploads` directory must exist for `File.cp!/2`
-        # and MyAppWeb.static_paths/0 should contain uploads to work,.
+        dest = Path.join(["priv/static/uploads", Path.basename(path)])
         File.cp!(path, dest)
         {:ok, Path.basename(dest)}
       end)
 
-    # update(socket, :uploaded_files, &(&1 ++ uploaded_files))
+    socket = update(socket, :uploaded_files, &(&1 ++ uploaded_files))
+
     item_params = Map.put(item_params, "picture", Enum.at(uploaded_files, 0))
     dbg(item_params)
     save_item(socket, socket.assigns.action, item_params)
